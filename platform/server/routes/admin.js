@@ -15,7 +15,7 @@ router.post('/login', (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' })
     }
 
-    const valid = bcrypt.compareSync(password, user.password)
+    const valid = bcrypt.compareSync(password, user.password_hash)
     if (!valid) {
       return res.status(401).json({ message: 'Invalid credentials' })
     }
@@ -32,26 +32,63 @@ router.get('/verify', authMiddleware, (req, res) => {
   res.json({ user: req.user })
 })
 
-// Dashboard
+// Dashboard stats
 router.get('/dashboard', authMiddleware, (req, res) => {
   try {
-    const totalLeads = queryOne('SELECT COUNT(*) as count FROM leads')?.count || 0
-    const newLeads = queryOne('SELECT COUNT(*) as count FROM leads WHERE status = "new"')?.count || 0
-    const totalListings = queryOne('SELECT COUNT(*) as count FROM listings')?.count || 0
-    const totalSubdomains = queryOne('SELECT COUNT(*) as count FROM subdomains')?.count || 0
-    const claimedSubdomains = queryOne('SELECT COUNT(*) as count FROM subdomains WHERE status = "claimed"')?.count || 0
-    const recentLeads = query('SELECT * FROM leads ORDER BY created_at DESC LIMIT 5')
-    const recentOutbound = query('SELECT * FROM outbound ORDER BY created_at DESC LIMIT 5')
+    const leads = {
+      total: queryOne('SELECT COUNT(*) as count FROM leads')?.count || 0,
+      listing: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'listing'")?.count || 0,
+      acquisition: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'acquisition'")?.count || 0,
+      subdomain: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'subdomain'")?.count || 0,
+      contact: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'contact'")?.count || 0,
+    }
 
-    res.json({
-      totalLeads,
-      newLeads,
-      totalListings,
-      totalSubdomains,
-      claimedSubdomains,
-      recentLeads,
-      recentOutbound,
-    })
+    const listings = queryOne('SELECT COUNT(*) as count FROM listings')?.count || 0
+
+    const subdomains = {
+      total: queryOne('SELECT COUNT(*) as count FROM subdomains')?.count || 0,
+      claimed: queryOne("SELECT COUNT(*) as count FROM subdomains WHERE status = 'claimed'")?.count || 0,
+      available: queryOne("SELECT COUNT(*) as count FROM subdomains WHERE status = 'available'")?.count || 0,
+    }
+
+    const outbound = {
+      total: queryOne('SELECT COUNT(*) as count FROM outbound')?.count || 0,
+      contacted: queryOne("SELECT COUNT(*) as count FROM outbound WHERE status = 'contacted'")?.count || 0,
+      responded: queryOne("SELECT COUNT(*) as count FROM outbound WHERE status = 'responded'")?.count || 0,
+    }
+
+    res.json({ leads, listings, subdomains, outbound })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Analytics
+router.get('/analytics', authMiddleware, (req, res) => {
+  try {
+    const leads = {
+      total: queryOne('SELECT COUNT(*) as count FROM leads')?.count || 0,
+      listing: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'listing'")?.count || 0,
+      acquisition: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'acquisition'")?.count || 0,
+      subdomain: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'subdomain'")?.count || 0,
+      contact: queryOne("SELECT COUNT(*) as count FROM leads WHERE lead_type = 'contact'")?.count || 0,
+    }
+
+    const listings = queryOne('SELECT COUNT(*) as count FROM listings')?.count || 0
+
+    const subdomains = {
+      total: queryOne('SELECT COUNT(*) as count FROM subdomains')?.count || 0,
+      claimed: queryOne("SELECT COUNT(*) as count FROM subdomains WHERE status = 'claimed'")?.count || 0,
+      available: queryOne("SELECT COUNT(*) as count FROM subdomains WHERE status = 'available'")?.count || 0,
+    }
+
+    const outbound = {
+      total: queryOne('SELECT COUNT(*) as count FROM outbound')?.count || 0,
+      contacted: queryOne("SELECT COUNT(*) as count FROM outbound WHERE status = 'contacted'")?.count || 0,
+      responded: queryOne("SELECT COUNT(*) as count FROM outbound WHERE status = 'responded'")?.count || 0,
+    }
+
+    res.json({ leads, listings, subdomains, outbound })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -60,7 +97,7 @@ router.get('/dashboard', authMiddleware, (req, res) => {
 // Leads CRUD
 router.get('/leads', authMiddleware, (req, res) => {
   try {
-    const { type, status, search } = req.query
+    const { type, status, limit } = req.query
     let sql = 'SELECT * FROM leads WHERE 1=1'
     const params = []
 
@@ -74,12 +111,12 @@ router.get('/leads', authMiddleware, (req, res) => {
       params.push(status)
     }
 
-    if (search) {
-      sql += ' AND (contact_name LIKE ? OR contact_email LIKE ? OR company_name LIKE ?)'
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`)
-    }
-
     sql += ' ORDER BY created_at DESC'
+
+    if (limit) {
+      sql += ' LIMIT ?'
+      params.push(parseInt(limit))
+    }
 
     const leads = query(sql, params)
     res.json(leads)
@@ -90,16 +127,17 @@ router.get('/leads', authMiddleware, (req, res) => {
 
 router.patch('/leads/:id', authMiddleware, (req, res) => {
   try {
-    const { status, notes } = req.body
-    run('UPDATE leads SET status = ?, notes = ?, updated_at = datetime("now") WHERE id = ?',
-      [status, notes, req.params.id])
+    const updates = req.body
+    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ')
+    const values = [...Object.values(updates), req.params.id]
+    run(`UPDATE leads SET ${fields}, updated_at = datetime("now") WHERE id = ?`, values)
     res.json({ message: 'Lead updated' })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
 })
 
-router.delete('/leads/:id', authMiddleware, adminOnly, (req, res) => {
+router.delete('/leads/:id', authMiddleware, (req, res) => {
   try {
     run('DELETE FROM leads WHERE id = ?', [req.params.id])
     res.json({ message: 'Lead deleted' })
@@ -118,24 +156,20 @@ router.get('/listings', authMiddleware, (req, res) => {
   }
 })
 
-router.post('/listings', authMiddleware, adminOnly, (req, res) => {
+router.post('/listings', authMiddleware, (req, res) => {
   try {
     const {
-      company_name, slug, description, website_url, category, company_type,
-      company_stage, revenue_range, valuation, key_stat, notable_contracts,
-      products, tier, is_active, featured_badge, founded, headquarters,
-      employees, linkedin_url
+      company_name, slug, description, website, categories, company_type,
+      key_stat, tier, is_active, featured, founded, hq_location, employees
     } = req.body
 
     run(`
-      INSERT INTO listings (company_name, slug, description, website_url, category, company_type,
-        company_stage, revenue_range, valuation, key_stat, notable_contracts, products, tier,
-        is_active, featured_badge, founded, headquarters, employees, linkedin_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [company_name, slug, description, website_url, category, company_type,
-        company_stage, revenue_range, valuation, key_stat, notable_contracts,
-        products, tier, is_active ? 1 : 0, featured_badge ? 1 : 0, founded,
-        headquarters, employees, linkedin_url])
+      INSERT INTO listings (company_name, slug, description, website, categories, company_type,
+        key_stat, tier, is_active, featured, founded, hq_location, employees)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [company_name, slug, description, website, categories, company_type,
+        key_stat, tier || 'free', is_active !== false ? 1 : 0, featured ? 1 : 0,
+        founded, hq_location, employees])
 
     const id = getLastInsertId()
     res.status(201).json({ id, message: 'Listing created' })
@@ -144,7 +178,7 @@ router.post('/listings', authMiddleware, adminOnly, (req, res) => {
   }
 })
 
-router.patch('/listings/:id', authMiddleware, adminOnly, (req, res) => {
+router.patch('/listings/:id', authMiddleware, (req, res) => {
   try {
     const updates = req.body
     const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ')
@@ -156,7 +190,7 @@ router.patch('/listings/:id', authMiddleware, adminOnly, (req, res) => {
   }
 })
 
-router.delete('/listings/:id', authMiddleware, adminOnly, (req, res) => {
+router.delete('/listings/:id', authMiddleware, (req, res) => {
   try {
     run('DELETE FROM listings WHERE id = ?', [req.params.id])
     res.json({ message: 'Listing deleted' })
@@ -165,53 +199,22 @@ router.delete('/listings/:id', authMiddleware, adminOnly, (req, res) => {
   }
 })
 
-// Subdomains CRUD
+// Subdomains
 router.get('/subdomains', authMiddleware, (req, res) => {
   try {
-    const subdomains = query('SELECT * FROM subdomains ORDER BY subdomain ASC')
+    const { status } = req.query
+    let sql = 'SELECT * FROM subdomains WHERE 1=1'
+    const params = []
+
+    if (status) {
+      sql += ' AND status = ?'
+      params.push(status)
+    }
+
+    sql += ' ORDER BY subdomain ASC'
+
+    const subdomains = query(sql, params)
     res.json(subdomains)
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.post('/subdomains', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const {
-      subdomain, listing_id, subdomain_type, display_name, tagline, description,
-      category, status, is_featured, price_range, website_url
-    } = req.body
-
-    run(`
-      INSERT INTO subdomains (subdomain, listing_id, subdomain_type, display_name, tagline,
-        description, category, status, is_featured, price_range, website_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [subdomain, listing_id, subdomain_type, display_name, tagline, description,
-        category, status, is_featured ? 1 : 0, price_range, website_url])
-
-    const id = getLastInsertId()
-    res.status(201).json({ id, message: 'Subdomain created' })
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.patch('/subdomains/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const updates = req.body
-    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ')
-    const values = [...Object.values(updates), req.params.id]
-    run(`UPDATE subdomains SET ${fields}, updated_at = datetime("now") WHERE id = ?`, values)
-    res.json({ message: 'Subdomain updated' })
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.delete('/subdomains/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    run('DELETE FROM subdomains WHERE id = ?', [req.params.id])
-    res.json({ message: 'Subdomain deleted' })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -229,14 +232,14 @@ router.get('/outbound', authMiddleware, (req, res) => {
 
 router.post('/outbound', authMiddleware, (req, res) => {
   try {
-    const { company_name, contact_name, contact_title, contact_email, contact_method, status, notes } = req.body
+    const { contact_name, title, company, email, phone, priority, status, notes } = req.body
     run(`
-      INSERT INTO outbound (company_name, contact_name, contact_title, contact_email, contact_method, outreach_date, status, notes)
-      VALUES (?, ?, ?, ?, ?, datetime("now"), ?, ?)
-    `, [company_name, contact_name, contact_title, contact_email, contact_method, status, notes])
+      INSERT INTO outbound (contact_name, title, company, email, phone, priority, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `, [contact_name, title, company, email, phone, priority || 'normal', status || 'pending', notes])
 
     const id = getLastInsertId()
-    res.status(201).json({ id, message: 'Outbound created' })
+    res.status(201).json({ id, message: 'Outbound contact created' })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
@@ -247,98 +250,27 @@ router.patch('/outbound/:id', authMiddleware, (req, res) => {
     const updates = req.body
     const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ')
     const values = [...Object.values(updates), req.params.id]
-    run(`UPDATE outbound SET ${fields} WHERE id = ?`, values)
+    run(`UPDATE outbound SET ${fields}, updated_at = datetime("now") WHERE id = ?`, values)
     res.json({ message: 'Outbound updated' })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }
 })
 
-// Articles CRUD
+router.delete('/outbound/:id', authMiddleware, (req, res) => {
+  try {
+    run('DELETE FROM outbound WHERE id = ?', [req.params.id])
+    res.json({ message: 'Outbound deleted' })
+  } catch (error) {
+    res.status(500).json({ message: error.message })
+  }
+})
+
+// Articles
 router.get('/articles', authMiddleware, (req, res) => {
   try {
     const articles = query('SELECT * FROM articles ORDER BY published_at DESC')
     res.json(articles)
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.post('/articles', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const { title, slug, summary, content, category, source, source_url, published_at, is_published } = req.body
-    run(`
-      INSERT INTO articles (title, slug, summary, content, category, source, source_url, published_at, is_published)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [title, slug, summary, content, category, source, source_url, published_at, is_published ? 1 : 0])
-
-    const id = getLastInsertId()
-    res.status(201).json({ id, message: 'Article created' })
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.patch('/articles/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    const updates = req.body
-    const fields = Object.keys(updates).map(k => `${k} = ?`).join(', ')
-    const values = [...Object.values(updates), req.params.id]
-    run(`UPDATE articles SET ${fields} WHERE id = ?`, values)
-    res.json({ message: 'Article updated' })
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-router.delete('/articles/:id', authMiddleware, adminOnly, (req, res) => {
-  try {
-    run('DELETE FROM articles WHERE id = ?', [req.params.id])
-    res.json({ message: 'Article deleted' })
-  } catch (error) {
-    res.status(500).json({ message: error.message })
-  }
-})
-
-// Analytics
-router.get('/analytics', authMiddleware, (req, res) => {
-  try {
-    // Leads by type
-    const leadsByType = query(`
-      SELECT lead_type, COUNT(*) as count FROM leads GROUP BY lead_type
-    `)
-
-    // Leads by status
-    const leadsByStatus = query(`
-      SELECT status, COUNT(*) as count FROM leads GROUP BY status
-    `)
-
-    // Leads over time (last 30 days)
-    const leadsOverTime = query(`
-      SELECT DATE(created_at) as date, COUNT(*) as count
-      FROM leads
-      WHERE created_at >= datetime('now', '-30 days')
-      GROUP BY DATE(created_at)
-      ORDER BY date ASC
-    `)
-
-    // Subdomains by type
-    const subdomainsByType = query(`
-      SELECT subdomain_type, COUNT(*) as count FROM subdomains GROUP BY subdomain_type
-    `)
-
-    // Subdomains by status
-    const subdomainsByStatus = query(`
-      SELECT status, COUNT(*) as count FROM subdomains GROUP BY status
-    `)
-
-    res.json({
-      leadsByType,
-      leadsByStatus,
-      leadsOverTime,
-      subdomainsByType,
-      subdomainsByStatus,
-    })
   } catch (error) {
     res.status(500).json({ message: error.message })
   }

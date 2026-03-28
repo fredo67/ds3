@@ -25,7 +25,7 @@ router.get('/listings', (req, res) => {
     const params = []
 
     if (category) {
-      sql += ' AND category LIKE ?'
+      sql += ' AND categories LIKE ?'
       params.push(`%${category}%`)
     }
 
@@ -35,10 +35,10 @@ router.get('/listings', (req, res) => {
     }
 
     if (featured === 'true') {
-      sql += ' AND featured_badge = 1'
+      sql += ' AND featured = 1'
     }
 
-    sql += ' ORDER BY featured_badge DESC, company_name ASC'
+    sql += ' ORDER BY featured DESC, company_name ASC'
 
     if (limit) {
       sql += ' LIMIT ?'
@@ -73,7 +73,7 @@ router.get('/subdomains', (req, res) => {
     const params = []
 
     if (type) {
-      sql += ' AND subdomain_type = ?'
+      sql += ' AND type = ?'
       params.push(type)
     }
 
@@ -112,7 +112,7 @@ router.get('/subdomains/:subdomain', (req, res) => {
 router.get('/articles', (req, res) => {
   try {
     const { category, limit } = req.query
-    let sql = 'SELECT * FROM articles WHERE is_published = 1'
+    let sql = "SELECT * FROM articles WHERE status = 'published'"
     const params = []
 
     if (category) {
@@ -137,7 +137,7 @@ router.get('/articles', (req, res) => {
 // Get single article
 router.get('/articles/:slug', (req, res) => {
   try {
-    const article = queryOne('SELECT * FROM articles WHERE slug = ? AND is_published = 1', [req.params.slug])
+    const article = queryOne("SELECT * FROM articles WHERE slug = ? AND status = 'published'", [req.params.slug])
     if (!article) {
       return res.status(404).json({ message: 'Article not found' })
     }
@@ -151,20 +151,20 @@ router.get('/articles/:slug', (req, res) => {
 router.post('/leads', (req, res) => {
   try {
     const {
-      lead_type, company_name, contact_name, contact_email, contact_phone,
-      contact_title, message, source, offer_range, desired_subdomain
+      lead_type, company_name, company, contact_name, email, phone,
+      title, message, description, subject, source, offer_range, desired_subdomain, website
     } = req.body
 
-    if (!contact_name || !contact_email || !lead_type) {
+    if (!email || !lead_type) {
       return res.status(400).json({ message: 'Missing required fields' })
     }
 
     run(`
-      INSERT INTO leads (lead_type, company_name, contact_name, contact_email, contact_phone,
-        contact_title, message, source, offer_range, desired_subdomain)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `, [lead_type, company_name, contact_name, contact_email, contact_phone,
-        contact_title, message, source, offer_range, desired_subdomain])
+      INSERT INTO leads (lead_type, company_name, company, contact_name, email, phone,
+        title, message, description, subject, source, offer_range, desired_subdomain, website)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `, [lead_type, company_name, company, contact_name, email, phone,
+        title, message, description, subject, source, offer_range, desired_subdomain, website])
 
     const id = getLastInsertId()
     res.status(201).json({ id, message: 'Lead submitted successfully' })
@@ -177,10 +177,10 @@ router.post('/leads', (req, res) => {
 router.get('/stats', (req, res) => {
   try {
     const totalCompanies = queryOne('SELECT COUNT(*) as count FROM listings WHERE is_active = 1')?.count || 0
-    const featuredCompanies = queryOne('SELECT COUNT(*) as count FROM listings WHERE is_active = 1 AND featured_badge = 1')?.count || 0
-    const totalArticles = queryOne('SELECT COUNT(*) as count FROM articles WHERE is_published = 1')?.count || 0
+    const featuredCompanies = queryOne('SELECT COUNT(*) as count FROM listings WHERE is_active = 1 AND featured = 1')?.count || 0
+    const totalArticles = queryOne("SELECT COUNT(*) as count FROM articles WHERE status = 'published'")?.count || 0
     const totalSubdomains = queryOne('SELECT COUNT(*) as count FROM subdomains')?.count || 0
-    const availableSubdomains = queryOne('SELECT COUNT(*) as count FROM subdomains WHERE status = "available"')?.count || 0
+    const availableSubdomains = queryOne("SELECT COUNT(*) as count FROM subdomains WHERE status = 'available'")?.count || 0
 
     res.json({
       totalCompanies,
