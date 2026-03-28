@@ -13,7 +13,7 @@ The third generation of domain monetization. Turn any domain from a "parked page
 ## Live Demo
 
 - **Platform:** https://app.doma.xyz
-- **Example Site:** https://military.ai.hsu.to (www2.military.ai demo)
+- **Documentation:** https://docs.doma.xyz
 
 ## Six Revenue Layers
 
@@ -98,8 +98,9 @@ cd ds3/platform
 # Install
 npm install
 
-# Seed database (defense template)
-npm run seed -- --template=defense
+# Configure domain (copy and edit .env)
+cp server/.env.example server/.env
+# Edit server/.env to set your BASE_DOMAIN, ADMIN_EMAIL, etc.
 
 # Development
 npm run dev

@@ -19,6 +19,16 @@ export function SiteConfigProvider({ children }) {
     })
   }, [])
 
+  const refreshConfig = async () => {
+    try {
+      const data = await api.getConfig()
+      setConfig(data)
+      applyTheme(data)
+    } catch (err) {
+      console.error('Failed to refresh config:', err)
+    }
+  }
+
   const updateConfig = async (updates) => {
     const newConfig = { ...config, ...updates }
     setConfig(newConfig)
@@ -28,7 +38,7 @@ export function SiteConfigProvider({ children }) {
   }
 
   return (
-    <SiteConfigContext.Provider value={{ config, loading, setConfig, updateConfig }}>
+    <SiteConfigContext.Provider value={{ config, loading, setConfig, updateConfig, refreshConfig }}>
       {children}
     </SiteConfigContext.Provider>
   )
@@ -55,7 +65,7 @@ function applyTheme(config) {
   root.style.setProperty('--color-text-secondary', config['design.color_text_secondary'] || '#888899')
 
   // Apply fonts
-  const fontDisplay = config['design.font_display'] || 'Rajdhani'
+  const fontDisplay = config['design.font_display'] || 'Inter'
   const fontBody = config['design.font_body'] || 'Inter'
   const fontMono = config['design.font_mono'] || 'JetBrains Mono'
 
@@ -79,14 +89,15 @@ function applyTheme(config) {
   }
 }
 
+// Generic fallback config - actual values come from server
 function getDefaultConfig() {
   return {
-    'site.domain': 'military.ai',
-    'site.display_name': 'MILITARY.AI',
-    'site.tagline': 'The namespace for the future of battlespaces',
-    'site.subtitle': 'Tracking the companies, contracts, and technologies reshaping modern warfare',
-    'site.vertical': 'defense',
-    'design.template': 'command-center',
+    'site.domain': 'example.ai',
+    'site.display_name': 'EXAMPLE.AI',
+    'site.tagline': 'The premium namespace',
+    'site.subtitle': 'Your domain directory and monetization platform',
+    'site.vertical': 'generic',
+    'design.template': 'minimal',
     'design.color_background': '#0a0a0f',
     'design.color_surface': '#12121a',
     'design.color_border': '#1a1a2e',
@@ -96,7 +107,7 @@ function getDefaultConfig() {
     'design.color_success': '#00ff88',
     'design.color_text': '#e0e0e0',
     'design.color_text_secondary': '#888899',
-    'design.font_display': 'Rajdhani',
+    'design.font_display': 'Inter',
     'design.font_body': 'Inter',
     'design.font_mono': 'JetBrains Mono',
     'features.parking': 'true',

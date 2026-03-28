@@ -198,7 +198,7 @@ router.get('/stats', (req, res) => {
 router.get('/context', (req, res) => {
   try {
     const host = req.headers.host || ''
-    const baseDomain = process.env.BASE_DOMAIN || 'military.ai'
+    const baseDomain = process.env.BASE_DOMAIN || 'example.ai'
 
     // Check if this is a subdomain request
     let subdomain = null

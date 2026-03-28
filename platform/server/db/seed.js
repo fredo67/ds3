@@ -11,29 +11,35 @@ export function seedDatabase() {
     return
   }
 
+  // Get domain from environment or use generic default
+  const baseDomain = process.env.BASE_DOMAIN || 'example.ai'
+  const domainName = baseDomain.split('.')[0].toUpperCase()
+  const domainExt = baseDomain.split('.')[1]?.toUpperCase() || 'AI'
+
   // Create admin user
+  const adminEmail = process.env.ADMIN_EMAIL || `admin@${baseDomain}`
   const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10)
   run(`
     INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)
-  `, [process.env.ADMIN_EMAIL || 'admin@military.ai', adminPassword, 'admin'])
+  `, [adminEmail, adminPassword, 'admin'])
 
   // Create owner user
   const ownerPassword = bcrypt.hashSync('owner123', 10)
   run(`
     INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)
-  `, ['owner@military.ai', ownerPassword, 'owner'])
+  `, [`owner@${baseDomain}`, ownerPassword, 'owner'])
 
-  // Seed default config
+  // Seed default config - generic/customizable
   const defaultConfig = {
-    'site.domain': process.env.BASE_DOMAIN || 'military.ai',
-    'site.display_name': 'MILITARY.AI',
-    'site.tagline': 'The namespace for the future of battlespaces',
-    'site.subtitle': 'Tracking the companies, contracts, and technologies reshaping modern warfare',
-    'site.vertical': 'defense',
-    'site.contact_email': 'info@military.ai',
+    'site.domain': baseDomain,
+    'site.display_name': `${domainName}.${domainExt}`,
+    'site.tagline': 'The premium namespace',
+    'site.subtitle': 'Directory and intelligence platform',
+    'site.vertical': 'generic',
+    'site.contact_email': `info@${baseDomain}`,
     'site.escrow_provider': 'Escrow.com',
 
-    'design.template': 'command-center',
+    'design.template': 'minimal',
     'design.color_background': '#0a0a0f',
     'design.color_surface': '#12121a',
     'design.color_border': '#1a1a2e',
@@ -42,7 +48,7 @@ export function seedDatabase() {
     'design.color_accent': '#ff3366',
     'design.color_success': '#00ff88',
     'design.color_text': '#e0e0e0',
-    'design.font_display': 'Rajdhani',
+    'design.font_display': 'Inter',
     'design.font_body': 'Inter',
     'design.font_mono': 'JetBrains Mono',
 
@@ -60,84 +66,45 @@ export function seedDatabase() {
     run('INSERT INTO site_config (config_key, config_value) VALUES (?, ?)', [key, value])
   }
 
-  // Seed sample companies
+  // Seed sample companies - generic examples
   const companies = [
     {
-      company_name: 'Anduril Industries',
-      slug: 'anduril',
-      description: 'Defense technology company building advanced autonomous systems and AI for national security.',
-      company_type: 'disruptor',
-      key_stat: '$60B Valuation',
-      website: 'https://anduril.com',
-      hq_location: 'Costa Mesa, CA',
-      founded: '2017',
-      employees: '2500+',
-      categories: JSON.stringify(['Autonomous Systems', 'AI/ML', 'Counter-UAS']),
+      company_name: 'Acme Corp',
+      slug: 'acme',
+      description: 'Leading technology company providing innovative solutions.',
+      company_type: 'enterprise',
+      key_stat: '$10B Revenue',
+      website: 'https://example.com',
+      hq_location: 'San Francisco, CA',
+      founded: '2010',
+      employees: '1000+',
+      categories: JSON.stringify(['Technology', 'Innovation', 'Enterprise']),
       featured: 1,
     },
     {
-      company_name: 'Palantir Technologies',
-      slug: 'palantir',
-      description: 'Software company specializing in big data analytics for government and commercial clients.',
-      company_type: 'disruptor',
-      key_stat: '$50B Market Cap',
-      website: 'https://palantir.com',
-      hq_location: 'Denver, CO',
-      founded: '2003',
-      employees: '3000+',
-      categories: JSON.stringify(['AI/ML', 'Command & Control', 'Intelligence']),
+      company_name: 'TechStart Inc',
+      slug: 'techstart',
+      description: 'Fast-growing startup disrupting the industry with AI-powered tools.',
+      company_type: 'startup',
+      key_stat: 'Series B',
+      website: 'https://example.com',
+      hq_location: 'Austin, TX',
+      founded: '2020',
+      employees: '50+',
+      categories: JSON.stringify(['AI/ML', 'SaaS', 'Startup']),
       featured: 1,
     },
     {
-      company_name: 'Shield AI',
-      slug: 'shield-ai',
-      description: 'Building the world\'s best AI pilot for defense applications.',
-      company_type: 'disruptor',
-      key_stat: '$2.7B Valuation',
-      website: 'https://shield.ai',
-      hq_location: 'San Diego, CA',
-      founded: '2015',
-      employees: '800+',
-      categories: JSON.stringify(['Autonomous Systems', 'AI/ML', 'Drones']),
-      featured: 1,
-    },
-    {
-      company_name: 'Lockheed Martin',
-      slug: 'lockheed-martin',
-      description: 'Global aerospace, defense, and security company.',
-      company_type: 'legacy',
-      key_stat: '$65B Revenue',
-      website: 'https://lockheedmartin.com',
-      hq_location: 'Bethesda, MD',
-      founded: '1926',
-      employees: '116000+',
-      categories: JSON.stringify(['Aerospace', 'Defense Systems', 'Space']),
-      featured: 1,
-    },
-    {
-      company_name: 'Northrop Grumman',
-      slug: 'northrop-grumman',
-      description: 'Aerospace and defense technology company.',
-      company_type: 'legacy',
-      key_stat: '$37B Revenue',
-      website: 'https://northropgrumman.com',
-      hq_location: 'Falls Church, VA',
-      founded: '1939',
-      employees: '95000+',
-      categories: JSON.stringify(['Aerospace', 'Cybersecurity', 'Space']),
-      featured: 0,
-    },
-    {
-      company_name: 'Rebellion Defense',
-      slug: 'rebellion-defense',
-      description: 'AI-powered software for national security applications.',
-      company_type: 'disruptor',
-      key_stat: 'Series C',
-      website: 'https://rebelliondefense.com',
-      hq_location: 'Washington, DC',
-      founded: '2019',
-      employees: '200+',
-      categories: JSON.stringify(['AI/ML', 'Cybersecurity', 'Software']),
+      company_name: 'Global Solutions Ltd',
+      slug: 'global-solutions',
+      description: 'International consulting and services firm.',
+      company_type: 'enterprise',
+      key_stat: 'Fortune 500',
+      website: 'https://example.com',
+      hq_location: 'New York, NY',
+      founded: '1995',
+      employees: '10000+',
+      categories: JSON.stringify(['Consulting', 'Services', 'Enterprise']),
       featured: 0,
     },
   ]
@@ -156,21 +123,15 @@ export function seedDatabase() {
   // Seed sample articles
   const articles = [
     {
-      title: 'Anduril Wins $20B Army Contract',
-      excerpt: 'Anduril Industries has been awarded a massive Army contract for autonomous systems.',
-      category: 'Contracts',
-      published_at: new Date().toISOString(),
-    },
-    {
-      title: 'AI in Defense: 2024 Trends',
-      excerpt: 'Key trends shaping the integration of artificial intelligence in defense applications.',
+      title: 'Industry Trends for 2024',
+      excerpt: 'Key trends shaping the industry this year.',
       category: 'Analysis',
       published_at: new Date().toISOString(),
     },
     {
-      title: 'Shield AI Expands Hivemind Platform',
-      excerpt: 'Shield AI announces major updates to its Hivemind autonomous flight system.',
-      category: 'Product',
+      title: 'Market Update: Q1 Report',
+      excerpt: 'Quarterly market analysis and insights.',
+      category: 'Market',
       published_at: new Date().toISOString(),
     },
   ]
@@ -184,12 +145,10 @@ export function seedDatabase() {
 
   // Seed sample subdomains
   const subdomains = [
-    { subdomain: 'anduril', status: 'claimed', owner_name: 'Anduril Industries', redirect_url: 'https://anduril.com' },
-    { subdomain: 'palantir', status: 'claimed', owner_name: 'Palantir Technologies', redirect_url: 'https://palantir.com' },
-    { subdomain: 'shield', status: 'available' },
-    { subdomain: 'defense', status: 'available' },
-    { subdomain: 'cyber', status: 'available' },
-    { subdomain: 'intel', status: 'available' },
+    { subdomain: 'acme', status: 'claimed', owner_name: 'Acme Corp', redirect_url: 'https://example.com' },
+    { subdomain: 'api', status: 'available' },
+    { subdomain: 'docs', status: 'available' },
+    { subdomain: 'app', status: 'available' },
   ]
 
   for (const sub of subdomains) {
@@ -199,32 +158,7 @@ export function seedDatabase() {
     `, [sub.subdomain, sub.status, sub.owner_name || null, sub.redirect_url || null])
   }
 
-  // Seed sample outbound contacts
-  const outbound = [
-    {
-      contact_name: 'John Smith',
-      title: 'VP Corporate Development',
-      company: 'Raytheon',
-      email: 'jsmith@raytheon.com',
-      priority: 'high',
-      status: 'pending',
-    },
-    {
-      contact_name: 'Sarah Johnson',
-      title: 'Head of M&A',
-      company: 'L3Harris',
-      email: 'sjohnson@l3harris.com',
-      priority: 'high',
-      status: 'contacted',
-    },
-  ]
-
-  for (const contact of outbound) {
-    run(`
-      INSERT INTO outbound (contact_name, title, company, email, priority, status)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [contact.contact_name, contact.title, contact.company, contact.email, contact.priority, contact.status])
-  }
-
   console.log('Database seeded successfully!')
+  console.log(`Domain: ${baseDomain}`)
+  console.log(`Admin: ${adminEmail}`)
 }

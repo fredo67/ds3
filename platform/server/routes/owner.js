@@ -2,7 +2,7 @@ import { Router } from 'express'
 import multer from 'multer'
 import { fileURLToPath } from 'url'
 import { dirname, join, extname } from 'path'
-import { existsSync, unlinkSync, readdirSync } from 'fs'
+import { existsSync, unlinkSync } from 'fs'
 import { query, queryOne, run } from '../db/schema.js'
 import { authMiddleware, ownerOrAdmin } from '../middleware/auth.js'
 
@@ -187,8 +187,11 @@ router.get('/templates', authMiddleware, ownerOrAdmin, (req, res) => {
 // Reset config to defaults
 router.post('/config/reset', authMiddleware, ownerOrAdmin, (req, res) => {
   try {
+    // Get current domain from config to preserve it
+    const currentDomain = queryOne('SELECT config_value FROM site_config WHERE config_key = "site.domain"')?.config_value
+
     // Reset all config to defaults
-    const defaults = getDefaultConfig()
+    const defaults = getDefaultConfig(currentDomain)
     for (const [key, value] of Object.entries(defaults)) {
       const existing = queryOne('SELECT id FROM site_config WHERE config_key = ?', [key])
       if (existing) {
@@ -209,7 +212,8 @@ router.post('/config/reset', authMiddleware, ownerOrAdmin, (req, res) => {
 router.post('/config/reset/:section', authMiddleware, ownerOrAdmin, (req, res) => {
   try {
     const { section } = req.params
-    const defaults = getDefaultConfig()
+    const currentDomain = queryOne('SELECT config_value FROM site_config WHERE config_key = "site.domain"')?.config_value
+    const defaults = getDefaultConfig(currentDomain)
 
     // Filter defaults by section prefix
     const sectionDefaults = Object.entries(defaults)
@@ -231,18 +235,23 @@ router.post('/config/reset/:section', authMiddleware, ownerOrAdmin, (req, res) =
   }
 })
 
-function getDefaultConfig() {
+// Generic default config - uses environment variables or generic placeholders
+function getDefaultConfig(domain) {
+  const baseDomain = domain || process.env.BASE_DOMAIN || 'example.ai'
+  const domainName = baseDomain.split('.')[0].toUpperCase()
+  const domainExt = baseDomain.split('.')[1]?.toUpperCase() || 'AI'
+
   return {
-    'site.domain': 'military.ai',
-    'site.display_name': 'MILITARY.AI',
-    'site.tagline': 'The namespace for the future of battlespaces',
-    'site.subtitle': 'Tracking the companies, contracts, and technologies reshaping modern warfare',
-    'site.vertical': 'defense',
+    'site.domain': baseDomain,
+    'site.display_name': `${domainName}.${domainExt}`,
+    'site.tagline': 'The premium namespace',
+    'site.subtitle': 'Directory and intelligence platform',
+    'site.vertical': 'generic',
     'site.owner_display_name': 'Domain Owner',
     'site.escrow_provider': 'Escrow.com',
-    'site.contact_email': 'info@military.ai',
+    'site.contact_email': `info@${baseDomain}`,
 
-    'design.template': 'command-center',
+    'design.template': 'minimal',
     'design.logo_url': '',
     'design.favicon_url': '',
     'design.hero_image_url': '',
@@ -257,12 +266,12 @@ function getDefaultConfig() {
     'design.color_text': '#e0e0e0',
     'design.color_text_secondary': '#888899',
 
-    'design.font_display': 'Rajdhani',
+    'design.font_display': 'Inter',
     'design.font_body': 'Inter',
     'design.font_mono': 'JetBrains Mono',
 
     'design.dark_mode': 'true',
-    'design.show_stats_bar': 'true',
+    'design.show_stats_bar': 'false',
     'design.hero_style': 'full',
 
     'copy.hero_tagline': '',
@@ -278,25 +287,21 @@ function getDefaultConfig() {
     'features.agent_namespace': 'true',
     'features.intelligence': 'true',
     'features.three_layer_model': 'true',
-    'features.who_should_own': 'true',
+    'features.who_should_own': 'false',
 
     'vertical.categories': JSON.stringify([
-      'Autonomous Systems', 'Counter-UAS', 'AI/ML', 'Cybersecurity',
-      'Space', 'Robotics', 'Electronic Warfare', 'Command & Control'
+      'Category 1', 'Category 2', 'Category 3', 'Category 4'
     ]),
 
     'vertical.company_types': JSON.stringify([
-      { value: 'disruptor', label: 'Disruptor' },
-      { value: 'legacy', label: 'Legacy Prime' },
-      { value: 'startup', label: 'Startup' }
+      { value: 'enterprise', label: 'Enterprise' },
+      { value: 'startup', label: 'Startup' },
+      { value: 'agency', label: 'Agency' }
     ]),
 
-    'stats.items': JSON.stringify([
-      { value: '$20B', label: 'Anduril Army Contract' },
-      { value: '$60B', label: 'Anduril Valuation' },
-      { value: '$886B', label: 'Global Defense Market' },
-      { value: '$150B', label: 'US Defense Modernization' }
-    ]),
+    'stats.items': JSON.stringify([]),
+
+    'domain.bin_price': 'Contact for pricing',
   }
 }
 
