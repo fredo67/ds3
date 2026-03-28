@@ -1,17 +1,20 @@
 import { useState, useEffect } from 'react'
 import {
-  Settings, Palette, Type, Image, Globe, Layers, Save, RefreshCw, Eye, ExternalLink
+  Settings, Palette, Type, Image, Globe, Layers, Save, RefreshCw, Eye, ExternalLink,
+  BarChart3, DollarSign, Users, Inbox, TrendingUp, Upload, X
 } from 'lucide-react'
 import { api } from '../lib/api'
 import { useSiteConfig } from '../hooks/useSiteConfig'
-import { DOMAIN_CONFIG } from '../lib/constants'
+import { DOMAIN_CONFIG, DOMA_APP_URL } from '../lib/constants'
 
 export default function OwnerDashboard() {
   const { config, refreshConfig } = useSiteConfig()
   const [localConfig, setLocalConfig] = useState({})
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState('site')
+  const [activeTab, setActiveTab] = useState('overview')
   const [templates, setTemplates] = useState([])
+  const [dashboardData, setDashboardData] = useState(null)
+  const [uploading, setUploading] = useState(false)
 
   const domain = config?.['site.domain'] || DOMAIN_CONFIG.domain
 
@@ -23,7 +26,23 @@ export default function OwnerDashboard() {
 
   useEffect(() => {
     api.getTemplates().then(setTemplates).catch(() => {})
+    api.getOwnerDashboard().then(setDashboardData).catch(() => {})
   }, [])
+
+  const handleFileUpload = async (e, configKey) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setUploading(true)
+    try {
+      const result = await api.uploadFile(file)
+      handleChange(configKey, result.url)
+    } catch (err) {
+      alert('Failed to upload file')
+    } finally {
+      setUploading(false)
+    }
+  }
 
   const handleChange = (key, value) => {
     setLocalConfig(prev => ({ ...prev, [key]: value }))
@@ -55,6 +74,7 @@ export default function OwnerDashboard() {
   }
 
   const tabs = [
+    { id: 'overview', label: 'Overview', icon: BarChart3 },
     { id: 'site', label: 'Site Settings', icon: Globe },
     { id: 'design', label: 'Design', icon: Palette },
     { id: 'copy', label: 'Copy', icon: Type },
@@ -108,6 +128,123 @@ export default function OwnerDashboard() {
 
       {/* Tab Content */}
       <div className="bg-surface rounded-lg border border-border p-6">
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            <h2 className="font-bold text-lg text-white">Domain Overview</h2>
+
+            {/* Revenue Cards */}
+            <div className="grid md:grid-cols-3 gap-4">
+              <div className="bg-background rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Parking Revenue</p>
+                    <p className="text-white font-mono font-bold">{dashboardData?.revenue?.parking || '—'}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Connect your parking provider for unified view</p>
+              </div>
+
+              <div className="bg-background rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-secondary/10 rounded-lg flex items-center justify-center">
+                    <Globe className="w-5 h-5 text-secondary" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Subdomain Revenue</p>
+                    <p className="text-white font-mono font-bold">{dashboardData?.revenue?.subdomains || '$0'}</p>
+                  </div>
+                </div>
+                <a href={DOMA_APP_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                  View on DOMA →
+                </a>
+              </div>
+
+              <div className="bg-background rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 bg-success/10 rounded-lg flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-gray-400 text-sm">Fractional Fees</p>
+                    <p className="text-white font-mono font-bold">{dashboardData?.revenue?.fractional || '$0'}</p>
+                  </div>
+                </div>
+                <a href={DOMA_APP_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+                  View on DOMA →
+                </a>
+              </div>
+            </div>
+
+            {/* Stats Row */}
+            <div className="grid md:grid-cols-4 gap-4">
+              <div className="bg-background rounded-lg border border-border p-4 text-center">
+                <p className="text-3xl font-bold font-mono text-white">{dashboardData?.leads?.total || 0}</p>
+                <p className="text-gray-400 text-sm">Total Leads</p>
+              </div>
+              <div className="bg-background rounded-lg border border-border p-4 text-center">
+                <p className="text-3xl font-bold font-mono text-accent">{dashboardData?.leads?.acquisition || 0}</p>
+                <p className="text-gray-400 text-sm">Acquisition Inquiries</p>
+              </div>
+              <div className="bg-background rounded-lg border border-border p-4 text-center">
+                <p className="text-3xl font-bold font-mono text-secondary">{dashboardData?.subdomains?.claimed || 0}</p>
+                <p className="text-gray-400 text-sm">Subdomains Claimed</p>
+              </div>
+              <div className="bg-background rounded-lg border border-border p-4 text-center">
+                <p className="text-3xl font-bold font-mono text-success">{dashboardData?.subdomains?.available || 0}</p>
+                <p className="text-gray-400 text-sm">Available</p>
+              </div>
+            </div>
+
+            {/* BIN Price */}
+            <div className="bg-background rounded-lg border border-accent/30 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-gray-400 text-sm mb-1">Current BIN Price</p>
+                  <p className="text-2xl font-bold font-mono text-white">{dashboardData?.binPrice || 'Not set'}</p>
+                </div>
+                <button
+                  onClick={() => setActiveTab('site')}
+                  className="px-4 py-2 border border-border text-gray-400 rounded-lg hover:bg-border text-sm"
+                >
+                  Edit BIN Price
+                </button>
+              </div>
+            </div>
+
+            {/* Recent Leads */}
+            <div>
+              <h3 className="font-bold text-white mb-3">Recent Leads</h3>
+              {dashboardData?.recentLeads?.length > 0 ? (
+                <div className="space-y-2">
+                  {dashboardData.recentLeads.slice(0, 5).map(lead => (
+                    <div key={lead.id} className="flex items-center justify-between p-3 bg-background rounded-lg border border-border">
+                      <div className="flex items-center gap-3">
+                        <Inbox className="w-4 h-4 text-gray-400" />
+                        <div>
+                          <p className="text-white text-sm">{lead.contact_name || lead.email}</p>
+                          <p className="text-gray-500 text-xs">{lead.lead_type} • {new Date(lead.created_at).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 text-xs rounded ${
+                        lead.status === 'new' ? 'bg-primary/20 text-primary' :
+                        lead.status === 'contacted' ? 'bg-secondary/20 text-secondary' :
+                        'bg-border text-gray-400'
+                      }`}>
+                        {lead.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm">No leads yet</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {activeTab === 'site' && (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -204,6 +341,77 @@ export default function OwnerDashboard() {
               >
                 <RefreshCw className="w-4 h-4" /> Reset
               </button>
+            </div>
+
+            {/* Branding */}
+            <div>
+              <label className="block text-sm text-gray-400 mb-3">Branding</label>
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* Logo Upload */}
+                <div className="p-4 border border-border rounded-lg">
+                  <p className="text-xs text-gray-500 mb-2">Logo</p>
+                  {localConfig['design.logo_url'] ? (
+                    <div className="relative">
+                      <img
+                        src={localConfig['design.logo_url']}
+                        alt="Logo"
+                        className="h-16 object-contain bg-background rounded p-2"
+                      />
+                      <button
+                        onClick={() => handleChange('design.logo_url', '')}
+                        className="absolute top-0 right-0 p-1 bg-accent/20 text-accent rounded-full hover:bg-accent/30"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50">
+                      <Upload className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-400 text-sm">{uploading ? 'Uploading...' : 'Upload Logo'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        onChange={(e) => handleFileUpload(e, 'design.logo_url')}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                  )}
+                </div>
+
+                {/* Favicon Upload */}
+                <div className="p-4 border border-border rounded-lg">
+                  <p className="text-xs text-gray-500 mb-2">Favicon</p>
+                  {localConfig['design.favicon_url'] ? (
+                    <div className="relative inline-block">
+                      <img
+                        src={localConfig['design.favicon_url']}
+                        alt="Favicon"
+                        className="w-8 h-8 object-contain bg-background rounded p-1"
+                      />
+                      <button
+                        onClick={() => handleChange('design.favicon_url', '')}
+                        className="absolute -top-1 -right-1 p-1 bg-accent/20 text-accent rounded-full hover:bg-accent/30"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex items-center justify-center gap-2 p-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50">
+                      <Upload className="w-4 h-4 text-gray-400" />
+                      <span className="text-gray-400 text-sm">{uploading ? 'Uploading...' : 'Upload Favicon'}</span>
+                      <input
+                        type="file"
+                        accept="image/png,image/svg+xml,image/x-icon"
+                        onChange={(e) => handleFileUpload(e, 'design.favicon_url')}
+                        className="hidden"
+                        disabled={uploading}
+                      />
+                    </label>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">32x32 or 64x64 recommended</p>
+                </div>
+              </div>
             </div>
 
             {/* Template Selection */}
