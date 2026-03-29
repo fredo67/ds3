@@ -48,7 +48,9 @@ export default function Layout() {
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-2">
-              <Shield className="w-8 h-8 text-primary" />
+              {config?.['design.show_logo_icon'] !== 'false' && (
+                <Shield className="w-8 h-8 text-primary" />
+              )}
               <span className="font-display font-bold text-xl tracking-tight">
                 <span className="text-white">{displayName.split('.')[0]}</span>
                 <span className="text-primary">.{displayName.split('.')[1] || 'AI'}</span>
@@ -123,7 +125,9 @@ export default function Layout() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="md:col-span-2">
               <Link to="/" className="flex items-center gap-2 mb-4">
-                <Shield className="w-6 h-6 text-primary" />
+                {config?.['design.show_logo_icon'] !== 'false' && (
+                  <Shield className="w-6 h-6 text-primary" />
+                )}
                 <span className="font-display font-bold text-lg">
                   <span className="text-white">{displayName.split('.')[0]}</span>
                   <span className="text-primary">.{displayName.split('.')[1] || 'AI'}</span>

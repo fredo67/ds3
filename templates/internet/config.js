@@ -28,6 +28,7 @@ export const templateConfig = {
 
   'design.dark_mode': 'true',
   'design.show_stats_bar': 'true',
+  'design.show_logo_icon': 'false',  // Text-only logo for internet.com
 
   // COPY — short, punchy, no jargon
   'copy.hero_tagline': 'The original address of the Internet',
