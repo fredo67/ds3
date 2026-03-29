@@ -1,7 +1,24 @@
 import { run, query } from './schema.js'
 import bcrypt from 'bcryptjs'
+import { fileURLToPath } from 'url'
+import { dirname, join } from 'path'
+import { existsSync } from 'fs'
 
-export function seedDatabase() {
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
+
+// Domain to template mapping
+const domainTemplateMap = {
+  'internet.com': 'internet',
+  'military.ai': 'defense',
+  'credit.ai': 'finance',
+  'mortgage.ai': 'finance',
+  'legal.ai': 'legal',
+  'health.ai': 'health',
+  'realestate.ai': 'realestate',
+}
+
+export async function seedDatabase() {
   console.log('Seeding database...')
 
   // Check if already seeded
@@ -16,6 +33,36 @@ export function seedDatabase() {
   const domainName = baseDomain.split('.')[0].toUpperCase()
   const domainExt = baseDomain.split('.')[1]?.toUpperCase() || 'AI'
 
+  // Try to load domain-specific template
+  const templateName = domainTemplateMap[baseDomain]
+  let templateConfig = null
+  let templateSeedData = null
+
+  if (templateName) {
+    const templatePath = join(__dirname, '..', '..', '..', 'templates', templateName)
+
+    try {
+      const configPath = join(templatePath, 'config.js')
+      if (existsSync(configPath)) {
+        const configModule = await import(`file://${configPath}`)
+        templateConfig = configModule.templateConfig
+        console.log(`Loaded template config: ${templateName}`)
+      }
+    } catch (e) {
+      console.log(`No config found for template: ${templateName}`, e.message)
+    }
+
+    try {
+      const seedPath = join(templatePath, 'seed-data.js')
+      if (existsSync(seedPath)) {
+        templateSeedData = await import(`file://${seedPath}`)
+        console.log(`Loaded template seed data: ${templateName}`)
+      }
+    } catch (e) {
+      console.log(`No seed data found for template: ${templateName}`, e.message)
+    }
+  }
+
   // Create admin user
   const adminEmail = process.env.ADMIN_EMAIL || `admin@${baseDomain}`
   const adminPassword = bcrypt.hashSync(process.env.ADMIN_PASSWORD || 'admin123', 10)
@@ -29,7 +76,7 @@ export function seedDatabase() {
     INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)
   `, [`owner@${baseDomain}`, ownerPassword, 'owner'])
 
-  // Seed default config - generic/customizable
+  // Seed config - use template config if available, otherwise generic defaults
   const defaultConfig = {
     'site.domain': baseDomain,
     'site.display_name': `${domainName}.${domainExt}`,
@@ -48,6 +95,7 @@ export function seedDatabase() {
     'design.color_accent': '#ff3366',
     'design.color_success': '#00ff88',
     'design.color_text': '#e0e0e0',
+    'design.color_text_secondary': '#888899',
     'design.font_display': 'Inter',
     'design.font_body': 'Inter',
     'design.font_mono': 'JetBrains Mono',
@@ -62,12 +110,15 @@ export function seedDatabase() {
     'domain.bin_price': 'Contact for pricing',
   }
 
-  for (const [key, value] of Object.entries(defaultConfig)) {
+  // Merge template config over defaults
+  const finalConfig = { ...defaultConfig, ...(templateConfig || {}) }
+
+  for (const [key, value] of Object.entries(finalConfig)) {
     run('INSERT INTO site_config (config_key, config_value) VALUES (?, ?)', [key, value])
   }
 
-  // Seed sample companies - generic examples
-  const companies = [
+  // Seed companies - use template data if available
+  const companies = templateSeedData?.companies || [
     {
       company_name: 'Acme Corp',
       slug: 'acme',
@@ -120,8 +171,8 @@ export function seedDatabase() {
     ])
   }
 
-  // Seed sample articles
-  const articles = [
+  // Seed articles - use template data if available
+  const articles = templateSeedData?.articles || [
     {
       title: 'Industry Trends for 2024',
       excerpt: 'Key trends shaping the industry this year.',
@@ -143,8 +194,8 @@ export function seedDatabase() {
     `, [article.title, article.excerpt, article.category, article.published_at])
   }
 
-  // Seed sample subdomains
-  const subdomains = [
+  // Seed subdomains - use template data if available
+  const subdomains = templateSeedData?.subdomains || [
     { subdomain: 'acme', status: 'claimed', owner_name: 'Acme Corp', redirect_url: 'https://example.com' },
     { subdomain: 'api', status: 'available' },
     { subdomain: 'docs', status: 'available' },
@@ -153,12 +204,30 @@ export function seedDatabase() {
 
   for (const sub of subdomains) {
     run(`
-      INSERT INTO subdomains (subdomain, status, owner_name, redirect_url, type)
-      VALUES (?, ?, ?, ?, 'redirect')
-    `, [sub.subdomain, sub.status, sub.owner_name || null, sub.redirect_url || null])
+      INSERT INTO subdomains (subdomain, status, owner_name, redirect_url, type, display_name, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [
+      sub.subdomain,
+      sub.status,
+      sub.owner_name || null,
+      sub.redirect_url || null,
+      sub.type || 'redirect',
+      sub.display_name || sub.subdomain,
+      sub.description || null
+    ])
+  }
+
+  // Seed outbound contacts if available
+  const outbound = templateSeedData?.outbound || []
+  for (const contact of outbound) {
+    run(`
+      INSERT INTO outbound (company, contact_name, title, priority, status)
+      VALUES (?, ?, ?, ?, ?)
+    `, [contact.company, contact.contact_name, contact.title, contact.priority, contact.status])
   }
 
   console.log('Database seeded successfully!')
   console.log(`Domain: ${baseDomain}`)
+  console.log(`Template: ${templateName || 'generic'}`)
   console.log(`Admin: ${adminEmail}`)
 }

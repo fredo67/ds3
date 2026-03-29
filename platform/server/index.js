@@ -28,7 +28,7 @@ app.use('/uploads', express.static(join(__dirname, 'uploads')))
 await initDb()
 
 // Seed database with defaults
-seedDatabase()
+await seedDatabase()
 
 // Routes
 app.use('/api', publicRoutes)
