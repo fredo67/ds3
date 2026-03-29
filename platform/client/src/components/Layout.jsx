@@ -12,13 +12,18 @@ export default function Layout() {
   const domain = config?.['site.domain'] || DOMAIN_CONFIG.domain
   const displayName = config?.['site.display_name'] || domain.toUpperCase()
 
-  const navLinks = [
-    { path: '/', label: 'Home' },
-    { path: '/companies', label: 'Companies' },
-    { path: '/subdomains', label: 'Subdomains' },
-    { path: '/intelligence', label: 'Intelligence' },
-    { path: '/get-listed', label: 'Get Listed' },
+  // Build nav links based on enabled features
+  const allNavLinks = [
+    { path: '/', label: 'Home', always: true },
+    { path: '/companies', label: 'Directory', feature: 'directory' },
+    { path: '/subdomains', label: 'Namespace', feature: 'subdomains' },
+    { path: '/intelligence', label: 'Intelligence', feature: 'intelligence' },
+    { path: '/get-listed', label: 'Get Listed', always: true },
   ]
+
+  const navLinks = allNavLinks.filter(link =>
+    link.always || config?.[`features.${link.feature}`] !== 'false'
+  )
 
   return (
     <div className="min-h-screen bg-background">

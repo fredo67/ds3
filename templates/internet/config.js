@@ -1,69 +1,63 @@
-// Internet/Technology vertical template config for internet.com
+// Internet.com demo config — clean, high-contrast, sales-ready
 export const templateConfig = {
   'site.domain': 'internet.com',
   'site.display_name': 'INTERNET.COM',
   'site.tagline': 'The original address of the Internet',
-  'site.subtitle': 'Directory, intelligence hub, and namespace for the companies defining the next era of the Internet',
-  'site.vertical': 'internet',
+  'site.subtitle': 'Since 1992. Over 1 billion requests served.',
+  'site.vertical': 'tech',
   'site.contact_email': 'info@internet.com',
-  'site.escrow_provider': 'Escrow.com',
 
-  'design.template': 'editorial',
+  // DESIGN: Clean, high-contrast, easy to read on screen share
+  'design.template': 'minimal',
 
-  // Color palette: Deep space blue/black with electric blue primary, warm amber accent
-  // NOT the generic cyan from military.ai — internet.com should feel like a premium editorial publication
-  'design.color_background': '#08090d',
-  'design.color_surface': '#0f1117',
-  'design.color_border': '#1c1e2a',
-  'design.color_primary': '#3b82f6',      // Confident blue — trust, authority
-  'design.color_secondary': '#8b5cf6',    // Purple — innovation, future
-  'design.color_accent': '#f59e0b',       // Amber — premium, attention
-  'design.color_success': '#10b981',      // Emerald
-  'design.color_text': '#e2e8f0',
-  'design.color_text_secondary': '#94a3b8',
+  // Higher contrast than military.ai defaults
+  'design.color_background': '#09090b',     // Near-black (zinc-950)
+  'design.color_surface': '#18181b',        // Zinc-900
+  'design.color_border': '#27272a',         // Zinc-800 — visible borders
+  'design.color_primary': '#3b82f6',        // Blue-500 — clean, trustworthy
+  'design.color_secondary': '#6366f1',      // Indigo-500
+  'design.color_accent': '#f59e0b',         // Amber-500 — warm CTA
+  'design.color_success': '#22c55e',        // Green-500
+  'design.color_text': '#f4f4f5',           // Zinc-100 — HIGH contrast white
+  'design.color_text_secondary': '#a1a1aa', // Zinc-400
 
-  // Typography: Premium editorial feel
-  'design.font_display': 'Playfair Display',  // Serif authority for the OG domain
-  'design.font_body': 'Source Sans 3',
+  // FONTS: Simple, readable, no exotic serif
+  'design.font_display': 'DM Sans',
+  'design.font_body': 'DM Sans',
   'design.font_mono': 'JetBrains Mono',
 
   'design.dark_mode': 'true',
   'design.show_stats_bar': 'true',
-  'design.hero_style': 'full',
 
-  // Copy
+  // COPY — short, punchy, no jargon
   'copy.hero_tagline': 'The original address of the Internet',
-  'copy.hero_subtitle': 'Since 1992. Over 1 billion requests served. Now entering its next era — as a namespace, a directory, and a fractional asset.',
-  'copy.footer_text': 'Powered by DS3 — DomainSponsor 3.0',
+  'copy.hero_subtitle': 'Since 1992. Over 1 billion requests served. Now a namespace, a directory, and a fractional asset.',
 
-  // Features — all on for the demo
+  // FEATURES — turn OFF complexity
   'features.parking': 'true',
   'features.subdomains': 'true',
   'features.fractional': 'true',
   'features.directory': 'true',
-  'features.agent_namespace': 'true',
-  'features.intelligence': 'true',
-  'features.three_layer_model': 'true',
-  'features.who_should_own': 'true',
+  'features.agent_namespace': 'false',      // OFF — too technical
+  'features.intelligence': 'false',          // OFF — not the point of demo
+  'features.three_layer_model': 'true',     // ON — this IS the pitch
+  'features.who_should_own': 'true',        // ON — creates BIN pressure
 
   'vertical.categories': JSON.stringify([
-    'Search & Discovery', 'Cloud & Infrastructure', 'AI & Machine Learning',
-    'Cybersecurity', 'Social & Communication', 'E-Commerce',
-    'Developer Tools', 'Domain & DNS', 'Advertising & Media', 'Payments & Fintech'
+    'Search', 'Cloud', 'AI', 'Security', 'Social', 'Commerce', 'Domains', 'Payments'
   ]),
 
   'vertical.company_types': JSON.stringify([
-    { value: 'platform', label: 'Platform Giant' },
-    { value: 'disruptor', label: 'Disruptor' },
+    { value: 'platform', label: 'Platform' },
     { value: 'infrastructure', label: 'Infrastructure' },
-    { value: 'startup', label: 'Startup' }
+    { value: 'disruptor', label: 'Disruptor' }
   ]),
 
   'stats.items': JSON.stringify([
     { value: '1B+', label: 'Lifetime Requests' },
-    { value: '8,500', label: 'Daily Unique Visitors' },
-    { value: '186M', label: 'African Requests' },
-    { value: '1992', label: 'Year Registered' }
+    { value: '8,500', label: 'Daily Visitors' },
+    { value: '190+', label: 'Countries' },
+    { value: '1992', label: 'Registered' }
   ]),
 
   'domain.bin_price': 'Contact for pricing',
