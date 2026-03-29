@@ -2,7 +2,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { Shield, Menu, X, ExternalLink } from 'lucide-react'
 import { useState } from 'react'
 import { useSiteConfig } from '../hooks/useSiteConfig'
-import { DOMAIN_CONFIG, ROOT_DOMAIN_URL, DOMA_CLAIM_URL } from '../lib/constants'
+import { DOMAIN_CONFIG, buildRootDomainUrl, buildDomaClaimUrl } from '../lib/constants'
 
 export default function Layout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -11,6 +11,8 @@ export default function Layout() {
 
   const domain = config?.['site.domain'] || DOMAIN_CONFIG.domain
   const displayName = config?.['site.display_name'] || domain.toUpperCase()
+  const rootDomainUrl = buildRootDomainUrl(domain)
+  const domaClaimUrl = buildDomaClaimUrl(domain)
 
   // Build nav links based on enabled features
   const allNavLinks = [
@@ -31,10 +33,10 @@ export default function Layout() {
       <div className="bg-accent/10 border-b border-accent/30 py-1.5 px-4 text-center">
         <p className="text-xs text-accent">
           You're viewing <span className="font-mono">www2.{domain}</span> —
-          <a href={ROOT_DOMAIN_URL} target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:text-white">
+          <a href={rootDomainUrl} target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:text-white">
             Acquire {domain}
           </a> or
-          <a href={DOMA_CLAIM_URL} target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:text-white">
+          <a href={domaClaimUrl} target="_blank" rel="noopener noreferrer" className="underline ml-1 hover:text-white">
             claim a subdomain
           </a>
         </p>
@@ -69,7 +71,7 @@ export default function Layout() {
                 </Link>
               ))}
               <a
-                href={ROOT_DOMAIN_URL}
+                href={rootDomainUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-medium text-accent hover:text-white transition-colors flex items-center gap-1"
